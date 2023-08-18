@@ -25,6 +25,8 @@ class Args:
 
 def main(args: Args):
     
+    raise NotImplementedError("Not tested yet")
+
     # parse arguments
     csv_file = args.in_csv
     openai_api_key = args.openai_api_key
@@ -53,7 +55,7 @@ def main(args: Args):
             max_tokens=256
         )
 
-        tldr = response['choices'][0]['message']['content']
+        tldr = response["choices"][0]["message"]["content"]
         print(f"{row_index}: {tldr}")
 
 
