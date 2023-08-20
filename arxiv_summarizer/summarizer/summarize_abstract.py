@@ -14,10 +14,37 @@ import tyro
 from tqdm import tqdm
     
 
+def parse_keyword_from_response(result) -> str:
+    """Parses the keyword from Llama responses."""
+    
+    role: str = result["generation"]["role"]
+    assert role.lower() == "assistant", f"Unexpected role: {role}"
+    generated_lines = result["generation"]["content"].splitlines()
+
+    # exclude the starting line from the assistant
+    generated_lines = generated_lines[1:]
+    
+    # clean up the individual line
+    keywords = []
+
+    try:
+        for line in generated_lines:
+            line_clean = line.split(".")[1].strip().lower()
+            if ":" in line_clean:
+                line_clean = line_clean.split(":")[0].strip()
+            keywords.append(line_clean)
+    except:
+        keywords = generated_lines
+
+    # compile the lines into one paragraph
+    keywords = ", ".join(keywords)
+
+    return keywords
+
 def main(
     in_csv: str = "./crawler/papers.csv",
-    llama_ckpt_dir: str = "../dependencies/llama/data/pretrained_models/llama-2-7b-chat/",
-    tokenizer_path: str = "../dependencies/llama/data/pretrained_models/tokenizer.model",
+    llama_ckpt_dir: str = "./externals/llama/data/pretrained_models/llama-2-7b-chat/",
+    tokenizer_path: str = "./externals/llama/data/pretrained_models/tokenizer.model",
     temperature: float = 0.6,
     top_p: float = 0.9,
     max_seq_len: int = 8192,
@@ -50,8 +77,10 @@ def main(
     )
 
     # extract keyword from each abstract
-    for row_index, row in tqdm(dataframe.iterrows()):
-        title = row["title"]
+    num_row = dataframe.shape[0]
+    for row_index, row in tqdm(dataframe.iterrows(), total=num_row):
+
+        # get abstract to summarize
         abstract = row["abstract"]
 
         # populate dialog
@@ -78,16 +107,13 @@ def main(
             top_p=top_p,
         )
 
-        # display results
-        # TODO: save results to CSV
-        for dialog, result in zip(dialogs, results):
-            for msg in dialog:
-                print(f"{msg['role'].capitalize()}: {msg['content']}\n")
-            print(
-                f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}"
-            )
-            print("\n==================================\n")
+        # update dataframe
+        for result in results:
+            keywords = parse_keyword_from_response(result)
+            dataframe.at[row_index, "keywords"] = keywords
 
+    # save dataframe
+    dataframe.to_csv(in_csv, index=False)
 
 if __name__ == "__main__":
     fire.Fire(main)
