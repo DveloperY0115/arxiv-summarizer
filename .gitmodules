@@ -1,0 +1,3 @@
+[submodule "arxiv_summarizer/externals/llama"]
+	path = arxiv_summarizer/externals/llama
+	url = https://github.com/facebookresearch/llama.git
